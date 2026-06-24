@@ -1,0 +1,6 @@
+{
+  "name": "Cookbook Creator Toolkit",
+  "description": "An interactive planning and creator dashboard designed for independent cookbook authors, guiding users from initial concept, custom dietary profile building, and cover design styling, to recipe building, publishing economics, and launch marketing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, Cambria, serif;
+
+  --color-cream: #FAF7F2;
+  --color-warmwhite: #FFFDF9;
+  --color-sage: #7A9E7E;
+  --color-sagelight: #B8D4BB;
+  --color-sagedark: #4A6B4E;
+  --color-terracotta: #C4714A;
+  --color-terracottalight: #F2DDD3;
+  --color-terracottadark: #8B4A2E;
+  --color-charcoal: #2C2C2C;
+  --color-midgray: #6B6B6B;
+  --color-lightgray: #E8E4DE;
+  --color-gold: #C9A84C;
+  --color-goldlight: #F5EDD4;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-charcoal);
+    font-family: var(--font-sans);
+  }
+}
+
+/* Custom CSS to hide scrollbars while allowing swipe navigation in navbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
