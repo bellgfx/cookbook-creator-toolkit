@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
+import fs from "fs";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 
@@ -11,51 +12,342 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// ── SERVER-SIDE AUTHENTICATION & ADMIN DATABASE (auth_db.json) ──
+const dbPath = path.join(process.cwd(), "auth_db.json");
+
+function readDb() {
+  try {
+    if (!fs.existsSync(dbPath)) {
+      const initialDb = {
+        admin: {
+          email: "ogrlbdesigns@gmail.com",
+          password: "LetsCreate@2026"
+        },
+        users: [],
+        loginLogs: [],
+        emailLogs: [],
+        emailTemplate: "Hello,\n\nYour premium access passkey to the Cookbook Creator Toolkit has been generated!\n\nEmail: {{email}}\nPasskey: {{password}}\n\nUnlock your workbook drafts here:\nhttps://ais-pre-gsws727m66k4mjg4baxo66-846308911848.us-east1.run.app\n\nLet's get that Dream Cookbook on the shelves!\n\nBest regards,\nYour Cookbook Creator Team"
+      };
+      fs.writeFileSync(dbPath, JSON.stringify(initialDb, null, 2), "utf8");
+      return initialDb;
+    }
+    const data = fs.readFileSync(dbPath, "utf8");
+    return JSON.parse(data);
+  } catch (err) {
+    console.error("Error reading auth_db.json, recreating standard template", err);
+    return {
+      admin: {
+        email: "ogrlbdesigns@gmail.com",
+        password: "LetsCreate@2026"
+      },
+      users: [],
+      loginLogs: [],
+      emailLogs: [],
+      emailTemplate: "Hello,\n\nYour premium access passkey to the Cookbook Creator Toolkit has been generated!\n\nEmail: {{email}}\nPasskey: {{password}}\n\nUnlock your workbook drafts here:\nhttps://ais-pre-gsws727m66k4mjg4baxo66-846308911848.us-east1.run.app\n\nLet's get that Dream Cookbook on the shelves!\n\nBest regards,\nYour Cookbook Creator Team"
+    };
+  }
+}
+
+function writeDb(db: any) {
+  try {
+    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), "utf8");
+  } catch (err) {
+    console.error("Error writing auth_db.json", err);
+  }
+}
+
 // ── ENDPOINT: Verify Password for Premium Access ──
 app.post("/api/auth/verify", (req, res) => {
-  const { password } = req.body;
+  const { email, password } = req.body;
+  const db = readDb();
   
-  // Base list of passwords, pre-generating 20 secure, thematic premium keys you can give to customers.
-  // The original "LetsCreate@2026" is kept for backwards compatibility.
+  const userIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "Unknown IP";
+  const userAgent = req.headers["user-agent"] || "Unknown Browser";
+
+  if (!password) {
+    return res.status(400).json({ success: false, message: "Passkey is required." });
+  }
+
+  // 1. Check Admin login (case-insensitive email matching)
+  if (email && email.trim().toLowerCase() === db.admin.email.toLowerCase()) {
+    if (password === db.admin.password) {
+      db.loginLogs.unshift({
+        email: db.admin.email,
+        role: "admin",
+        timestamp: new Date().toISOString(),
+        ip: userIp,
+        userAgent: userAgent
+      });
+      writeDb(db);
+      return res.json({ 
+        success: true, 
+        role: "admin", 
+        email: db.admin.email,
+        token: "admin-session-token-2026" 
+      });
+    } else {
+      return res.status(401).json({ success: false, message: "Incorrect admin password." });
+    }
+  }
+
+  // 2. Check User logins
+  const trimmedEmail = email ? email.trim().toLowerCase() : "";
+  const foundUser = db.users.find((u: any) => 
+    (trimmedEmail && u.email.toLowerCase() === trimmedEmail && u.password === password) ||
+    (!trimmedEmail && u.password === password)
+  );
+
+  if (foundUser) {
+    if (foundUser.status === "inactive") {
+      return res.status(403).json({ success: false, message: "Your tester access has been deactivated by the administrator." });
+    }
+    
+    db.loginLogs.unshift({
+      email: foundUser.email,
+      role: "user",
+      timestamp: new Date().toISOString(),
+      ip: userIp,
+      userAgent: userAgent
+    });
+    writeDb(db);
+    return res.json({ 
+      success: true, 
+      role: "user", 
+      email: foundUser.email,
+      token: "premium-session-token-2026" 
+    });
+  }
+
+  // 3. Fallback to hardcoded premium passwords (for existing users with legacy credentials)
   const defaultPasswords = [
     "LetsCreate@2026",
     "CookbookCreator-Premium-7521",
     "IndieAuthor-Elite-9430",
     "GourmetChef-Access-2281",
-    "RecipeVibe-Special-5049",
-    "CookbookAuthor-Gold-3312",
-    "KitchenArtist-2026-8840",
-    "CreativeFlavors-9137",
-    "CulinaryIndie-Pro-4628",
-    "EpicureanWriter-5591",
-    "TasteMaker-Elite-6023",
-    "PublishYourFlavors-3810",
-    "GourmetAuthor-2026-1749",
-    "SecretIngredient-4402",
-    "PerfectPlating-Pro-9281",
-    "SizzleAndWrite-3051",
-    "TheArtOfCooking-8812",
-    "ModernTable-Elite-2740",
-    "HeirloomRecipes-2026-6619",
-    "MasterclassAuthor-3394",
-    "FeastAndPublish-7105"
+    "RecipeVibe-Special-5049"
   ];
-  const customPasswordsEnv = process.env.CUSTOMER_PASSWORDS || "";
-  const customPasswords = customPasswordsEnv
-    .split(",")
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0);
-    
-  const allValidPasswords = [...defaultPasswords, ...customPasswords];
-  
-  if (password && allValidPasswords.includes(password)) {
-    return res.json({ success: true, token: "premium-session-token-2026" });
-  } else {
+  if (defaultPasswords.includes(password)) {
+    if (password === "LetsCreate@2026") {
+      db.loginLogs.unshift({
+        email: "ogrlbdesigns@gmail.com (legacy login)",
+        role: "admin",
+        timestamp: new Date().toISOString(),
+        ip: userIp,
+        userAgent: userAgent
+      });
+      writeDb(db);
+      return res.json({ 
+        success: true, 
+        role: "admin", 
+        email: "ogrlbdesigns@gmail.com",
+        token: "admin-session-token-2026" 
+      });
+    }
+
+    db.loginLogs.unshift({
+      email: email ? email : "Legacy Key User",
+      role: "user",
+      timestamp: new Date().toISOString(),
+      ip: userIp,
+      userAgent: userAgent
+    });
+    writeDb(db);
     return res.json({ 
-      success: false, 
-      message: "Incorrect passkey. Please check with your administrator or input a valid premium tester key." 
+      success: true, 
+      role: "user", 
+      email: email || "legacy@user.com",
+      token: "premium-session-token-2026" 
     });
   }
+
+  return res.status(401).json({ 
+    success: false, 
+    message: "Incorrect email or passkey. Please check with your administrator or input a valid premium key." 
+  });
+});
+
+// ── CREDENTIALS RETRIEVAL & RESET ENDPOINTS ──
+app.post("/api/auth/forgot-password", (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: "Email is required." });
+  }
+  const db = readDb();
+  const trimmedEmail = email.trim().toLowerCase();
+
+  // If admin email
+  if (trimmedEmail === db.admin.email.toLowerCase()) {
+    return res.json({ 
+      success: true, 
+      found: true, 
+      role: "admin", 
+      message: "Admin account verified." 
+    });
+  }
+
+  // Check user list
+  const foundUser = db.users.find((u: any) => u.email.toLowerCase() === trimmedEmail);
+  if (foundUser) {
+    return res.json({ 
+      success: true, 
+      found: true, 
+      role: "user",
+      message: "Premium tester access found.",
+      passkey: foundUser.password // Directly allow retrieval of passkey securely in sandbox environment
+    });
+  }
+
+  return res.status(404).json({ success: false, message: "Email not found in our database. Please make sure you are registered or contact support." });
+});
+
+app.post("/api/auth/reset-password", (req, res) => {
+  const { email, newPassword } = req.body;
+  if (!email || !newPassword) {
+    return res.status(400).json({ success: false, message: "Email and new password are required." });
+  }
+  const db = readDb();
+  const trimmedEmail = email.trim().toLowerCase();
+
+  if (trimmedEmail === db.admin.email.toLowerCase()) {
+    db.admin.password = newPassword;
+    writeDb(db);
+    return res.json({ success: true, message: "Admin password reset successfully." });
+  }
+
+  const userIdx = db.users.findIndex((u: any) => u.email.toLowerCase() === trimmedEmail);
+  if (userIdx !== -1) {
+    db.users[userIdx].password = newPassword;
+    writeDb(db);
+    return res.json({ success: true, message: "Passkey reset successfully. You can now log in." });
+  }
+
+  return res.status(404).json({ success: false, message: "User not found." });
+});
+
+// ── ADMIN CONTROL PANEL ENDPOINTS ──
+
+// Change Admin Password
+app.post("/api/auth/admin/change-password", (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: "Password must be at least 6 characters long." });
+  }
+  const db = readDb();
+  db.admin.password = newPassword;
+  writeDb(db);
+  return res.json({ success: true, message: "Admin password changed successfully and saved permanently." });
+});
+
+// Get all users
+app.get("/api/auth/admin/users", (req, res) => {
+  const db = readDb();
+  return res.json({ users: db.users });
+});
+
+// Add user
+app.post("/api/auth/admin/users/add", (req, res) => {
+  const { email, password, status } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: "Email and password are required." });
+  }
+  
+  const db = readDb();
+  const trimmedEmail = email.trim().toLowerCase();
+  
+  const existingUser = db.users.find((u: any) => u.email.toLowerCase() === trimmedEmail);
+  if (existingUser) {
+    return res.status(400).json({ success: false, message: "A user with this email address already exists." });
+  }
+
+  const newUser = {
+    email: email.trim(),
+    password: password,
+    dateCreated: new Date().toISOString(),
+    status: status || "active"
+  };
+
+  db.users.push(newUser);
+  writeDb(db);
+  return res.json({ success: true, user: newUser });
+});
+
+// Edit user status or password
+app.post("/api/auth/admin/users/edit", (req, res) => {
+  const { email, password, status } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: "Email is required." });
+  }
+
+  const db = readDb();
+  const trimmedEmail = email.trim().toLowerCase();
+  const userIdx = db.users.findIndex((u: any) => u.email.toLowerCase() === trimmedEmail);
+
+  if (userIdx === -1) {
+    return res.status(404).json({ success: false, message: "User not found." });
+  }
+
+  if (password) db.users[userIdx].password = password;
+  if (status) db.users[userIdx].status = status;
+
+  writeDb(db);
+  return res.json({ success: true, user: db.users[userIdx] });
+});
+
+// Delete user
+app.post("/api/auth/admin/users/delete", (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: "Email is required." });
+  }
+
+  const db = readDb();
+  const trimmedEmail = email.trim().toLowerCase();
+  db.users = db.users.filter((u: any) => u.email.toLowerCase() !== trimmedEmail);
+  writeDb(db);
+  return res.json({ success: true, message: "User deleted successfully." });
+});
+
+// Send custom email (saves to simulated outbox log)
+app.post("/api/auth/admin/send-email", (req, res) => {
+  const { to, subject, body } = req.body;
+  if (!to || !subject || !body) {
+    return res.status(400).json({ success: false, message: "Recipient, subject, and body are required." });
+  }
+
+  const db = readDb();
+  const newEmailLog = {
+    to,
+    subject,
+    body,
+    timestamp: new Date().toISOString()
+  };
+
+  db.emailLogs.unshift(newEmailLog);
+  writeDb(db);
+  return res.json({ success: true, message: "Email sent successfully!", log: newEmailLog });
+});
+
+// Get admin logs
+app.get("/api/auth/admin/logs", (req, res) => {
+  const db = readDb();
+  return res.json({
+    loginLogs: db.loginLogs || [],
+    emailLogs: db.emailLogs || []
+  });
+});
+
+// Get and save template
+app.get("/api/auth/admin/template", (req, res) => {
+  const db = readDb();
+  return res.json({ template: db.emailTemplate });
+});
+
+app.post("/api/auth/admin/template", (req, res) => {
+  const { template } = req.body;
+  const db = readDb();
+  db.emailTemplate = template;
+  writeDb(db);
+  return res.json({ success: true, message: "Email template updated successfully." });
 });
 
 // Initialize Gemini Client

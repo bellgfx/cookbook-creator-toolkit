@@ -41,48 +41,237 @@ export default function Module6Publishing({ state, updateState, onNavigate }: Mo
     { id: 14, text: "Author Central page created at authorcentral.amazon.com", required: false },
   ];
 
-  // ── ROYALTY FORMULAS ──
+  // ── ROYALTY FORMULAS (Updated for 2026 Standards) ──
   const calcKdpCost = () => {
-    const base = 0.85;
-    const ppp = printType === "color" ? 0.07 : 0.012;
-    return base + (ppp * pages);
+    if (printType === "color") {
+      const perPage = 0.065; // Standard color page fee
+      const base = 1.00;     // Base fee for color print over 40 pages
+      const calculated = base + (perPage * pages);
+      return pages < 40 ? 3.65 : calculated;
+    } else {
+      const perPage = 0.015; // Black & White page fee
+      const base = 1.00;     // Base fee B&W over 110 pages
+      const calculated = base + (perPage * pages);
+      return pages < 110 ? 2.30 : calculated;
+    }
   };
 
+  // Amazon KDP takes a 40% store cut (for Standard sale), or 60% (for Expanded Distribution)
   const calcKdpRoyalty = () => {
     const cost = calcKdpCost();
-    const margin = price * 0.60 - cost;
+    const margin = price * 0.60 - cost; // Standard sale is 60% minus printing cost
     return Math.max(0, margin);
   };
 
-  const calcIngramCost = () => {
-    const base = printType === "color" ? 1.10 : 0.90;
-    const ppp = printType === "color" ? 0.08 : 0.015;
-    return base + (ppp * pages);
+  const calcExpandedKdpRoyalty = () => {
+    const cost = calcKdpCost();
+    const margin = price * 0.40 - cost; // Expanded distribution is 40% minus printing cost
+    return Math.max(0, margin);
   };
 
-  const calcIngramRoyalty = () => {
-    const cost = calcIngramCost();
-    const wholesale = price * 0.45; // 45% standard wholesale discount rate
-    const fee = price * 0.01875;
-    return Math.max(0, wholesale - cost - fee);
+  const calcKindleRoyalty = () => {
+    // eBooks get a standard 70% royalty on Amazon if priced between $2.99 and $9.99, or 35% otherwise.
+    // We'll subtract a small standard $0.15 file delivery fee for 70% royalty eBook delivery costs.
+    if (price >= 2.99 && price <= 9.99) {
+      return Math.max(0, (price * 0.70) - 0.15);
+    } else {
+      return Math.max(0, price * 0.35);
+    }
   };
 
   const calcEtsyRoyalty = () => {
-    const txnFee = price * 0.065;
-    const cardProc = price * 0.03 + 0.25;
-    return Math.max(0, price - txnFee - cardProc - 0.20);
+    const listingFee = 0.20;
+    const transFee = price * 0.065;
+    const processingFee = (price * 0.03) + 0.25;
+    return Math.max(0, price - transFee - processingFee - listingFee);
   };
 
   const kdpRoy = calcKdpRoyalty();
-  const ingramRoy = calcIngramRoyalty();
+  const kindleRoy = calcKindleRoyalty();
   const etsyRoy = calcEtsyRoyalty();
 
   // Recharts Chart Data
   const chartData = [
-    { name: "KDP Print", royalty: parseFloat(kdpRoy.toFixed(2)), color: "#7A9E7E" },
-    { name: "Ingram Print", royalty: parseFloat(ingramRoy.toFixed(2)), color: "#C4714A" },
-    { name: "Etsy Digital", royalty: parseFloat(etsyRoy.toFixed(2)), color: "#C9A84C" }
+    { name: "KDP Print (Physical)", royalty: parseFloat(kdpRoy.toFixed(2)), color: "#7A9E7E" },
+    { name: "KDP Kindle (eBook)", royalty: parseFloat(kindleRoy.toFixed(2)), color: "#3B82F6" },
+    { name: "Etsy PDF (Digital)", royalty: parseFloat(etsyRoy.toFixed(2)), color: "#C9A84C" }
   ];
+
+  // ── CORE DOWNLOAD HANDLERS ──
+  const handleDownloadJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `${state.title ? state.title.toLowerCase().replace(/\s+/g, "_") : "dream_cookbook"}_workspace.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleDownloadDOCX = () => {
+    let content = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <title>${state.title || "My Dream Cookbook"}</title>
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333333; margin: 40px; }
+          h1 { color: #2E4A34; font-family: Georgia, serif; font-size: 28px; border-bottom: 2px solid #2E4A34; padding-bottom: 5px; }
+          h2 { color: #5B7B61; font-family: Georgia, serif; font-size: 20px; margin-top: 30px; }
+          h3 { color: #444444; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+          .meta { font-style: italic; color: #666666; margin-bottom: 20px; }
+          .ingredients { background-color: #F4F7F4; padding: 15px; border-left: 4px solid #5B7B61; margin-bottom: 20px; }
+          .steps { margin-bottom: 30px; }
+          .step-item { margin-bottom: 8px; }
+          .badge { background-color: #E2ECE3; color: #2E4A34; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <h1>${state.title || "My Dream Cookbook"}</h1>
+        <p class="meta">By ${state.authorName || "An Inspired Chef"} — Cookbook Creator Draft</p>
+        
+        <h2>Cookbook Niche Concept</h2>
+        <p><strong>Primary Audience:</strong> ${state.audience.join(", ")}</p>
+        <p><strong>Motivation &amp; Brand Story:</strong> ${state.motivationText || "A personal collection of heirloom recipes."}</p>
+        <p><strong>Aesthetic Theme:</strong> ${state.themes.join(", ")}</p>
+        
+        <h2>Recipe Collections</h2>
+    `;
+
+    if (state.recipes.length === 0) {
+      content += `
+        <p><em>No recipe cards have been finalized in Module 5 yet. Go back to Module 5 and write some heirloom classics!</em></p>
+      `;
+    } else {
+      state.recipes.forEach((recipe) => {
+        content += `
+          <div style="page-break-after: always; border-bottom: 1px solid #DDDDDD; padding-bottom: 20px; margin-bottom: 20px;">
+            <h2>${recipe.title}</h2>
+            <p><em>${recipe.desc || "No description provided."}</em></p>
+            <p><strong>Prep Time:</strong> ${recipe.prepTime || "N/A"} | <strong>Cook Time:</strong> ${recipe.cookTime || "N/A"} | <strong>Servings:</strong> ${recipe.servings || "N/A"} | <strong>Difficulty:</strong> ${recipe.difficulty || "Easy"}</p>
+            <p><strong>Diet Tags:</strong> ${recipe.dietTags && recipe.dietTags.length > 0 ? recipe.dietTags.join(", ") : "None"}</p>
+            
+            <div class="ingredients">
+              <h3>Ingredients List:</h3>
+              <ul>
+                ${recipe.ingredients.map(ing => `<li><strong>${ing.amount} ${ing.unit}</strong> ${ing.name} ${ing.note ? `<em>(${ing.note})</em>` : ""} ${ing.flagged ? "⚠️ (Diet Alert!)" : ""}</li>`).join("")}
+              </ul>
+            </div>
+
+            <div class="steps">
+              <h3>Directions:</h3>
+              <ol>
+                ${recipe.steps.map(step => `<li>${step}</li>`).join("")}
+              </ol>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    content += `
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff' + content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.href = url;
+    downloadAnchor.download = `${state.title ? state.title.toLowerCase().replace(/\s+/g, "_") : "dream_cookbook"}_manuscript.doc`;
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleDownloadPDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups to preview the printable PDF layout.");
+      return;
+    }
+
+    let recipeListHTML = "";
+    if (state.recipes.length === 0) {
+      recipeListHTML = `<p style="font-style: italic; color: #888;">No recipes drafts written yet. Head back to Module 5 to draft your heirloom favorites!</p>`;
+    } else {
+      state.recipes.forEach((recipe) => {
+        recipeListHTML += `
+          <div class="recipe-card" style="page-break-inside: avoid; border: 1px solid #E5E5E5; padding: 25px; border-radius: 12px; margin-bottom: 25px; background: #FFF;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #5B7B61; padding-bottom: 10px; margin-bottom: 15px;">
+              <h2 style="font-family: Georgia, serif; margin: 0; color: #2E4A34; font-size: 22px;">${recipe.title}</h2>
+              <span style="font-size: 11px; font-weight: bold; background: #EEF5EF; color: #2E4A34; padding: 4px 8px; border-radius: 4px;">${recipe.category || "General"}</span>
+            </div>
+            <p style="font-style: italic; font-size: 13px; color: #555; margin-bottom: 15px;">${recipe.desc || ""}</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #FAF9F6; padding: 10px; border-radius: 8px; font-size: 11px; text-align: center; margin-bottom: 20px;">
+              <div><strong>Prep:</strong> ${recipe.prepTime || "N/A"}</div>
+              <div><strong>Cook:</strong> ${recipe.cookTime || "N/A"}</div>
+              <div><strong>Servings:</strong> ${recipe.servings || "N/A"}</div>
+              <div><strong>Difficulty:</strong> ${recipe.difficulty || "Easy"}</div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+              <div>
+                <h3 style="font-size: 12px; text-transform: uppercase; color: #5B7B61; margin-bottom: 10px; letter-spacing: 1px;">Ingredients</h3>
+                <ul style="padding-left: 15px; margin: 0; font-size: 12px; line-height: 1.8;">
+                  ${recipe.ingredients.map(ing => `<li><strong>${ing.amount} ${ing.unit}</strong> ${ing.name}</li>`).join("")}
+                </ul>
+              </div>
+              <div>
+                <h3 style="font-size: 12px; text-transform: uppercase; color: #5B7B61; margin-bottom: 10px; letter-spacing: 1px;">Directions</h3>
+                <ol style="padding-left: 15px; margin: 0; font-size: 12px; line-height: 1.8;">
+                  ${recipe.steps.map(step => `<li style="margin-bottom: 8px;">${step}</li>`).join("")}
+                </ol>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>${state.title || "Dream Cookbook Workspace"}</title>
+        <style>
+          body { font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; color: #2F2F2F; padding: 40px; background: #FAF9F6; }
+          .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+          h1 { font-family: Georgia, serif; color: #2E4A34; margin-bottom: 5px; font-size: 32px; font-weight: 900; }
+          .subtitle { font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; font-weight: bold; margin-bottom: 30px; border-bottom: 1px solid #EEE; padding-bottom: 15px; }
+          h2, h3 { font-family: Georgia, serif; color: #2E4A34; }
+          .concept-block { margin-bottom: 40px; padding: 20px; background: #EEF5EF; border-radius: 12px; font-size: 13px; }
+          @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; padding: 0; max-width: 100%; }
+            .recipe-card { border: none !important; padding: 0 !important; margin-bottom: 40px !important; page-break-after: always; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>${state.title || "My Dream Cookbook"}</h1>
+          <div class="subtitle">By ${state.authorName || "An Inspired Self-Publisher"}</div>
+          
+          <div class="concept-block">
+            <h3 style="margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #2E4A34;">My Heirloom Cookbook Concept</h3>
+            <p><strong>Primary Audience:</strong> ${state.audience.join(", ")}</p>
+            <p><strong>My Author Why:</strong> ${state.motivationText || "To compile, guard, and publish beloved family food traditions."}</p>
+            <p><strong>Aesthetic Identity:</strong> ${state.themes.join(", ")}</p>
+          </div>
+
+          <h2 style="border-bottom: 2px solid #5B7B61; padding-bottom: 8px; margin-top: 40px;">Finalized Recipe Manuscript</h2>
+          ${recipeListHTML}
+        </div>
+        <script>
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   // ── KEYWORD CREATOR ──
   const buildKeywordsList = () => {
@@ -116,6 +305,41 @@ export default function Module6Publishing({ state, updateState, onNavigate }: Mo
 
   return (
     <div className="space-y-6">
+      {/* ── DOWNLOAD COOKBOOK WORKSPACE TOOLKIT (AT TOP) ── */}
+      <div className="rounded-2xl border border-dashed border-sagedark/45 bg-[#EEF5EF]/55 p-5 space-y-4 shadow-sm font-sans animate-fadeIn">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h4 className="font-serif font-bold text-charcoal text-base flex items-center gap-2">
+              📥 Export Cookbook Project
+            </h4>
+            <p className="text-xs text-midgray leading-relaxed">
+              Ready to save your dream cookbook? Download your formatted draft data, printing specs, and written recipes in your preferred format.
+            </p>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleDownloadJSON}
+              className="flex items-center gap-1.5 text-xs font-bold text-sagedark bg-white hover:bg-[#EEF5EF] border border-lightgray/85 px-3 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+            >
+              ⚙️ Download .JSON Data
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-1.5 text-xs font-bold text-sagedark bg-white hover:bg-[#EEF5EF] border border-lightgray/85 px-3 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+            >
+              📄 Export PDF Printable
+            </button>
+            <button
+              onClick={handleDownloadDOCX}
+              className="flex items-center gap-1.5 text-xs font-bold text-sagedark bg-white hover:bg-[#EEF5EF] border border-lightgray/85 px-3 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+            >
+              📝 Download DOCX Word
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Sub tabs nav */}
       <div className="flex bg-white rounded-xl border border-lightgray/55 p-1 max-w-md mx-auto shadow-sm">
         {["Calculator", "ISBN Tree", "KDP Keywords", "Audit Checklist"].map((label, idx) => {
@@ -136,9 +360,9 @@ export default function Module6Publishing({ state, updateState, onNavigate }: Mo
       </div>
 
       {activeTab === "calculator" && (
-        <div className="grid gap-6 md:grid-cols-12 animate-fadeIn">
+        <div className="flex flex-col gap-6 max-w-2xl mx-auto animate-fadeIn">
           {/* Inputs Form */}
-          <div className="md:col-span-5 bg-white rounded-2xl border border-lightgray/60 p-6 space-y-5 shadow-sm">
+          <div className="bg-white rounded-2xl border border-lightgray/60 p-6 space-y-5 shadow-sm font-sans">
             <div>
               <h3 className="font-serif text-lg font-bold text-charcoal flex items-center gap-2">
                 <Calculator className="h-5 w-5 text-sagedark" /> Retail Royalty Calculator
@@ -177,7 +401,7 @@ export default function Module6Publishing({ state, updateState, onNavigate }: Mo
                 <select
                   value={printType}
                   onChange={(e) => setPrintType(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-lightgray rounded bg-cream/35 outline-none font-bold text-charcoal"
+                  className="w-full px-3 py-2 border border-lightgray rounded bg-cream/35 outline-none font-bold text-charcoal font-sans"
                 >
                   <option value="color">Full Color Interior</option>
                   <option value="bw">Black &amp; White Interior</option>
@@ -186,16 +410,16 @@ export default function Module6Publishing({ state, updateState, onNavigate }: Mo
             </div>
 
             <div className="rounded-lg bg-goldlight/25 border border-gold/30 p-3 text-[11px] leading-relaxed text-charcoal">
-              📈 <strong>Margin Recommendation:</strong> For physical cookbooks, aim for list prices above $20 for Color templates, ensuring you retain at least a $3-4 margin margin to offset printing costs.
+              📈 <strong>Price Recommendation:</strong> For physical cookbooks, try listing above $19.99 (B&W) or $29.99 (Color) so you have enough margin to earn back your production costs.
             </div>
           </div>
 
           {/* Graph Output with Recharts */}
-          <div className="md:col-span-7 bg-white rounded-2xl border border-lightgray/60 p-6 flex flex-col justify-between shadow-sm">
+          <div className="bg-white rounded-2xl border border-lightgray/60 p-6 flex flex-col justify-between shadow-sm">
             <div>
               <h4 className="font-serif font-bold text-charcoal text-base">Royalty Income Comparison</h4>
               <p className="text-[11px] text-midgray mt-0.5 leading-normal">
-                Estimated earnings accrued per individual transaction across core retail systems.
+                Estimated earnings you receive per sale after all printing costs and store fees.
               </p>
             </div>
 
@@ -216,16 +440,65 @@ export default function Module6Publishing({ state, updateState, onNavigate }: Mo
 
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="p-3 bg-sage/10 text-sagedark rounded-lg">
-                <span className="block text-[9px] uppercase font-bold">KDP Print</span>
+                <span className="block text-[9px] uppercase font-bold">KDP Standard</span>
                 <strong className="block text-lg">${kdpRoy.toFixed(2)}</strong>
               </div>
-              <div className="p-3 bg-terracotta/10 text-terracottadark rounded-lg">
-                <span className="block text-[9px] uppercase font-bold">Ingram Print</span>
-                <strong className="block text-lg">${ingramRoy.toFixed(2)}</strong>
+              <div className="p-3 bg-blue-50 text-blue-700 rounded-lg">
+                <span className="block text-[9px] uppercase font-bold">KDP Kindle eBook</span>
+                <strong className="block text-lg">${kindleRoy.toFixed(2)}</strong>
               </div>
               <div className="p-3 bg-gold/10 text-gold rounded-lg">
                 <span className="block text-[9px] uppercase font-bold">Etsy Digital</span>
                 <strong className="block text-lg">${etsyRoy.toFixed(2)}</strong>
+              </div>
+            </div>
+
+            {/* Clear Newbie-Friendly Breakdown */}
+            <div className="mt-4 rounded-xl bg-cream/35 border border-lightgray/40 p-4 space-y-3 text-xs text-charcoal font-sans">
+              <h5 className="font-serif font-bold text-sagedark text-sm">Where does the money go?</h5>
+              <div className="grid gap-3 sm:grid-cols-2 text-[11px] leading-relaxed">
+                <div className="space-y-1 bg-white p-2.5 rounded-lg border border-neutral-100">
+                  <span className="font-bold text-sagedark block">🛒 Standard Amazon Sale (60% Tier)</span>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>Retail Price:</span>
+                    <span className="font-mono">${price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>Amazon Cut (40%):</span>
+                    <span className="font-mono">-${(price * 0.4).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>Printing Cost ({pages} pages):</span>
+                    <span className="font-mono">-${calcKdpCost().toFixed(2)}</span>
+                  </div>
+                  <div className="border-t border-dashed border-neutral-200 pt-1 flex justify-between font-bold text-charcoal">
+                    <span>Your Earnings:</span>
+                    <span className="text-sagedark font-mono">${kdpRoy.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1 bg-white p-2.5 rounded-lg border border-neutral-100">
+                  <span className="font-bold text-blue-600 block">📱 KDP Kindle eBook (70% Tier)</span>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>eBook Retail Price:</span>
+                    <span className="font-mono">${price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>Amazon Cut ({price >= 2.99 && price <= 9.99 ? "30%" : "65%"}):</span>
+                    <span className="font-mono">-${(price >= 2.99 && price <= 9.99 ? price * 0.30 : price * 0.65).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>eBook Delivery Fee:</span>
+                    <span className="font-mono">-${price >= 2.99 && price <= 9.99 ? "0.15" : "0.00"}</span>
+                  </div>
+                  <div className="border-t border-dashed border-neutral-200 pt-1 flex justify-between font-bold text-charcoal">
+                    <span>Your Earnings:</span>
+                    <span className="text-blue-600 font-mono">${kindleRoy.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-[10px] text-midgray italic leading-normal border-t border-neutral-200/60 pt-2">
+                💡 <strong>eBook Selling Advantage:</strong> eBooks have zero physical printing costs, making them extremely profitable! Amazon offers a premium 70% royalty tier for eBooks priced between $2.99 and $9.99. Setting a price within this sweet spot keeps your cookbook accessible and highly lucrative.
               </div>
             </div>
           </div>

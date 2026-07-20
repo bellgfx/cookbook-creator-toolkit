@@ -1,7 +1,228 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Sparkles, Printer, Plus, Trash2, Layout, Sliders, AlertCircle, ShieldAlert, Upload, Download } from "lucide-react";
+import { Sparkles, Printer, Plus, Trash2, Layout, Sliders, AlertCircle, ShieldAlert, Upload, Download, Check, HelpCircle, ShieldCheck } from "lucide-react";
 import { GlobalState, Recipe } from "../types";
+
+export const DIETARY_COMPLIANCE_STANDARDS = [
+  {
+    id: "alpha-gal",
+    label: "Alpha-Gal Safe",
+    desc: "Mammal-free & Dairy-free",
+    standard: "Strictly avoid all mammal-derived ingredients (beef, pork, lamb, lard, gelatin) and mammalian dairy.",
+    forbiddenWords: ["beef", "pork", "lamb", "gelatin", "milk", "butter", "cheese", "cream", "whey", "lard", "bacon", "steak", "ham", "mutton", "venison", "bison", "dairy", "ghee", "veal", "pepperoni", "prosciutto", "sausage"]
+  },
+  {
+    id: "food-allergies",
+    label: "Food Allergies",
+    desc: "Free from major allergy triggers",
+    standard: "Identify and avoid major allergens: Peanuts, Tree Nuts, Milk, Eggs, Wheat, Soy, Fish, Shellfish, Sesame.",
+    forbiddenWords: ["peanut", "walnut", "almond", "cashew", "milk", "egg", "wheat", "soy", "fish", "shrimp", "crab", "lobster", "sesame"]
+  },
+  {
+    id: "migraine",
+    label: "Migraine & Neurological Diet",
+    desc: "Avoid triggers & vasodilators",
+    standard: "Eliminate high-tyramine, high-histamine, MSG, nitrites, and artificial sweeteners.",
+    forbiddenWords: ["aged cheese", "sausage", "salami", "wine", "soy sauce", "msg", "aspartame", "nitrite", "cured meat", "avocado", "chocolate"]
+  },
+  {
+    id: "heart",
+    label: "Heart & Cardiovascular",
+    desc: "Low sodium & healthy fats",
+    standard: "Adheres to cardiologist guidelines: saturated fat free, low sodium (≤140mg per serving), and no trans fats.",
+    forbiddenWords: ["salt", "trans fat", "butter", "lard", "heavy cream", "crisco", "shortening", "margarine", "coconut oil"]
+  },
+  {
+    id: "blood-sugar",
+    label: "Blood Sugar Management",
+    desc: "Steady glucose insulin curve",
+    standard: "Focus on low glycemic impact, zero refined sugars, and high fiber content.",
+    forbiddenWords: ["sugar", "syrup", "honey", "white flour", "corn syrup", "dextrose", "sucrose", "maltodextrin", "white bread", "white rice"]
+  },
+  {
+    id: "fodmap",
+    label: "Gastrointestinal & Gut (FODMAP)",
+    desc: "Soothes IBS / IBD flares",
+    standard: "Avoid fermentable oligosaccharides, disaccharides, monosaccharides, and polyols like garlic, onions, wheat, and dairy.",
+    forbiddenWords: ["garlic", "onion", "shallot", "honey", "wheat", "milk", "cauliflower", "artichoke", "beans", "lentils", "apple", "pear", "watermelon"]
+  },
+  {
+    id: "inflammation",
+    label: "Inflammation & Autoimmune",
+    desc: "Calms POTS, Crohn's, RA & AIP",
+    standard: "Autoimmune Protocol (AIP) compliant. Strictly eliminate nightshades, grains, dairy, eggs, nuts, and seeds. Supports POTS, Rheumatoid Arthritis, Crohn's.",
+    forbiddenWords: ["tomato", "pepper", "eggplant", "potato", "wheat", "grain", "rice", "dairy", "milk", "cheese", "butter", "egg", "nut", "seed", "paprika", "cayenne", "chili"]
+  },
+  {
+    id: "liver",
+    label: "Liver Health Diet",
+    desc: "Supports FLD, MASLD & Hepatitis",
+    standard: "Eliminate alcohol, hydrogenated fats, and high-fructose corn syrups. High in fiber and cruciferous greens.",
+    forbiddenWords: ["alcohol", "wine", "beer", "rum", "vodka", "whiskey", "sugar", "fructose", "trans fat", "crisco", "hydrogenated"]
+  },
+  {
+    id: "paleo",
+    label: "Paleo",
+    desc: "Caveman style whole foods",
+    standard: "Grain-free, legume-free, dairy-free, refined sugar-free, and processed oil-free. Focuses on lean meats and produce.",
+    forbiddenWords: ["wheat", "rice", "oats", "barley", "bean", "soy", "milk", "cheese", "butter", "sugar", "peanut", "corn", "vegetable oil", "canola"]
+  },
+  {
+    id: "vegan",
+    label: "Vegan",
+    desc: "100% plant-based",
+    standard: "Absolutely zero animal products or by-products, including meat, poultry, seafood, dairy, eggs, honey, or gelatin.",
+    forbiddenWords: ["beef", "pork", "chicken", "fish", "seafood", "egg", "milk", "butter", "cheese", "cream", "honey", "gelatin", "turkey", "lamb", "duck", "shrimp", "crab", "lobster", "anchovy", "lard", "whey", "casein"]
+  },
+  {
+    id: "vegetarian",
+    label: "Vegetarian",
+    desc: "Meat-free lifestyle",
+    standard: "Excludes meat, poultry, and seafood. Dairy products and eggs are acceptable.",
+    forbiddenWords: ["beef", "pork", "chicken", "fish", "seafood", "turkey", "lamb", "duck", "shrimp", "crab", "lobster", "anchovy", "lard", "pancetta", "bacon"]
+  },
+  {
+    id: "dairy-free",
+    label: "Dairy-Free",
+    desc: "Lactose & casein free",
+    standard: "Strictly avoid all dairy products derived from mammalian milk (cows, goats, sheep).",
+    forbiddenWords: ["milk", "cheese", "butter", "cream", "whey", "casein", "yogurt", "ghee", "lactose", "buttermilk", "custard"]
+  },
+  {
+    id: "carb-free",
+    label: "Carb-Free",
+    desc: "Zero-carb strict keto",
+    standard: "Avoid all starch, grains, sugars, high-carb fruits, and root vegetables.",
+    forbiddenWords: ["sugar", "rice", "wheat", "potato", "starch", "honey", "flour", "pasta", "corn", "bread", "oats", "banana", "apple", "quinoa", "yam"]
+  },
+  {
+    id: "ketogenic",
+    label: "Ketogenic",
+    desc: "High fat, low carb state",
+    standard: "Very low carbohydrate (<20-50g net carbs/day), high fats, and moderate protein.",
+    forbiddenWords: ["sugar", "rice", "wheat", "potato", "starch", "honey", "flour", "pasta", "corn", "bread", "oats", "sweets", "juice"]
+  },
+  {
+    id: "flexitarian",
+    label: "Flexitarian",
+    desc: "Semi-vegetarian focus",
+    standard: "Emphasis on plant-based foods, while allowing high-quality organic meat and seafood occasionally.",
+    forbiddenWords: ["processed meat", "hot dog", "bologna"]
+  },
+  {
+    id: "low-carb",
+    label: "Low-Carb",
+    desc: "Moderate carb restriction",
+    standard: "Reduce total carbohydrates and avoid high-glycemic grains and refined sugars.",
+    forbiddenWords: ["sugar", "rice", "wheat", "flour", "pasta", "bread", "honey", "corn syrup"]
+  },
+  {
+    id: "renal",
+    label: "Renal Diet",
+    desc: "Kidney function protective",
+    standard: "Strictly control levels of sodium, potassium, and phosphorus. Limit high-potassium/phosphorus foods.",
+    forbiddenWords: ["salt", "banana", "tomato", "spinach", "potato", "dairy", "milk", "cheese", "avocado", "orange", "whole wheat", "bran"]
+  },
+  {
+    id: "soft",
+    label: "Soft / Pureed Diet",
+    desc: "Easy chewing & dysphagia",
+    standard: "Foods must be smooth or soft-cooked, free of tough fibers, hard crusts, skins, or seeds.",
+    forbiddenWords: ["raw nuts", "tough skin", "seed", "crust", "crunchy", "hard", "raw apple", "crispy", "beef jerky", "popcorn"]
+  },
+  {
+    id: "diabetic",
+    label: "Diabetic- Low Glycemic",
+    desc: "Sugar-free glycemic control",
+    standard: "Absolutely sugar-free or low-glycemic, balanced with high dietary fiber and lean protein to stabilize insulin response.",
+    forbiddenWords: ["sugar", "syrup", "honey", "corn syrup", "dextrose", "sucrose", "maltodextrin", "agave", "maple syrup"]
+  },
+  {
+    id: "high-protein",
+    label: "High Protein",
+    desc: "Supports muscle & satiety",
+    standard: "Focuses on maximizing lean proteins (chicken, turkey, eggs, tofu, fish, legumes). Ensure ample protein source.",
+    forbiddenWords: []
+  },
+  {
+    id: "weight-loss",
+    label: "Weight Loss",
+    desc: "Calorie conscious & density",
+    standard: "Adheres to portion control, low calorie-density, high-fiber, and lean macronutrient targets.",
+    forbiddenWords: ["heavy cream", "butter", "trans fat", "sugar", "deep fried"]
+  },
+  {
+    id: "weight-gain",
+    label: "Diet for Weight Gain",
+    desc: "Adult & child development",
+    standard: "Calorically dense and nutrient-dense, incorporating plenty of healthy fats, seeds, healthy oils, and proteins.",
+    forbiddenWords: []
+  },
+  {
+    id: "fad-diets",
+    label: "Fad Diets",
+    desc: "Specific trending protocols",
+    standard: "Support for custom trends with educational safety guidelines to maintain basic metabolic balance.",
+    forbiddenWords: []
+  },
+  {
+    id: "mediterranean",
+    label: "Mediterranean",
+    desc: "Healthy heart & longevity",
+    standard: "Emphasis on olive oil, fresh vegetables, seafood, whole grains, nuts, and legumes.",
+    forbiddenWords: ["butter", "lard", "shortening", "margarine", "processed meat", "white flour"]
+  },
+  {
+    id: "dash",
+    label: "DASH Diet",
+    desc: "Hypertension therapeutic",
+    standard: "Dietary Approaches to Stop Hypertension. Restrict sodium and maximize potassium, calcium, and magnesium.",
+    forbiddenWords: ["salt", "sodium", "cured meat", "pickles", "soy sauce", "canned soup"]
+  },
+  {
+    id: "halal",
+    label: "Halal Diet",
+    desc: "Islamic compliant meals",
+    standard: "Ingredients must be certified Halal. Strictly no pork, mammalian blood, or alcohol byproducts.",
+    forbiddenWords: ["pork", "alcohol", "wine", "beer", "bacon", "ham", "lard", "gelatin", "rum", "cognac"]
+  },
+  {
+    id: "kosher",
+    label: "Kosher Diet",
+    desc: "Jewish dietary standards",
+    standard: "No pork or shellfish. Do not mix dairy and meat products in the same dish.",
+    forbiddenWords: ["pork", "shrimp", "crab", "lobster", "clams", "oysters", "bacon", "ham", "lard"]
+  }
+];
+
+export function getDietViolations(dietId: string, ingredients: { name: string }[]): string[] {
+  const diet = DIETARY_COMPLIANCE_STANDARDS.find(d => d.id === dietId);
+  if (!diet || !diet.forbiddenWords || diet.forbiddenWords.length === 0) return [];
+  
+  const violations: string[] = [];
+  ingredients.forEach(ing => {
+    if (!ing.name) return;
+    const ingNameLower = ing.name.toLowerCase();
+    diet.forbiddenWords.forEach(word => {
+      if (ingNameLower.includes(word)) {
+        // Double check to make sure it's actually violating
+        if (word === "milk" && (ingNameLower.includes("coconut") || ingNameLower.includes("almond") || ingNameLower.includes("oat") || ingNameLower.includes("soy") || ingNameLower.includes("rice"))) {
+          return;
+        }
+        if (word === "butter" && (ingNameLower.includes("coconut") || ingNameLower.includes("peanut") || ingNameLower.includes("almond") || ingNameLower.includes("cocoa") || ingNameLower.includes("shea") || ingNameLower.includes("seed"))) {
+          return;
+        }
+        if (word === "dairy" && ingNameLower.includes("dairy-free")) {
+          return;
+        }
+        if (!violations.includes(ing.name)) {
+          violations.push(ing.name);
+        }
+      }
+    });
+  });
+  return violations;
+}
 
 interface Module5Props {
   state: GlobalState;
@@ -38,6 +259,46 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
 
   const [activeCallout, setActiveCallout] = useState<string | null>("tip");
 
+  const [dietSearch, setDietSearch] = useState("");
+  const [selectedDietCat, setSelectedDietCat] = useState("all");
+
+  // Dietary Compliance derivations
+  const filteredDiets = DIETARY_COMPLIANCE_STANDARDS.filter((diet) => {
+    const matchesSearch = 
+      diet.label.toLowerCase().includes(dietSearch.toLowerCase()) ||
+      diet.desc.toLowerCase().includes(dietSearch.toLowerCase()) ||
+      diet.standard.toLowerCase().includes(dietSearch.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    if (selectedDietCat === "all") return true;
+    if (selectedDietCat === "medical") {
+      return ["alpha-gal", "migraine", "heart", "blood-sugar", "fodmap", "inflammation", "liver", "renal"].includes(diet.id);
+    }
+    if (selectedDietCat === "lifestyle") {
+      return ["paleo", "vegan", "vegetarian", "ketogenic", "flexitarian", "low-carb", "carb-free", "high-protein", "mediterranean", "dash"].includes(diet.id);
+    }
+    if (selectedDietCat === "allergies") {
+      return ["food-allergies", "dairy-free", "halal", "kosher", "soft", "weight-loss", "weight-gain", "fad-diets"].includes(diet.id);
+    }
+    return true;
+  });
+
+  const activeDietsWithWarnings = DIETARY_COMPLIANCE_STANDARDS.map((diet) => {
+    const isActive = draft.dietTags.includes(diet.label);
+    if (!isActive) return null;
+    const violations = getDietViolations(diet.id, draft.ingredients);
+    if (violations.length === 0) return null;
+    return { diet, violations };
+  }).filter((x): x is { diet: typeof DIETARY_COMPLIANCE_STANDARDS[0]; violations: string[] } => x !== null);
+
+  const activeCompliantDiets = DIETARY_COMPLIANCE_STANDARDS.filter((diet) => {
+    const isActive = draft.dietTags.includes(diet.label);
+    if (!isActive) return false;
+    const violations = getDietViolations(diet.id, draft.ingredients);
+    return violations.length === 0;
+  });
+
   // Re-sync default dietary tags if they change, but only if draft hasn't been edited drastically
   useEffect(() => {
     if (draft.title === "" && state.orderedBadges.length > 0) {
@@ -63,6 +324,24 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
   const handleUpdateIngredient = (index: number, fields: any) => {
     const clone = [...draft.ingredients];
     clone[index] = { ...clone[index], ...fields };
+
+    // Auto-flag based on active diet tags if the name changed
+    if (fields.name !== undefined) {
+      const nameLower = fields.name.toLowerCase();
+      let shouldFlag = false;
+      draft.dietTags.forEach((tagLabel) => {
+        const diet = DIETARY_COMPLIANCE_STANDARDS.find((d) => d.label === tagLabel);
+        if (diet && diet.forbiddenWords) {
+          diet.forbiddenWords.forEach((word) => {
+            if (word && nameLower.includes(word.toLowerCase())) {
+              shouldFlag = true;
+            }
+          });
+        }
+      });
+      clone[index].flagged = shouldFlag;
+    }
+
     setDraft((prev) => ({ ...prev, ingredients: clone }));
   };
 
@@ -95,7 +374,25 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
     const nextTags = exists
       ? draft.dietTags.filter((t) => t !== tagLabel)
       : [...draft.dietTags, tagLabel];
-    setDraft((prev) => ({ ...prev, dietTags: nextTags }));
+
+    // Auto-flag existing ingredients based on the new active tags
+    const updatedIngredients = draft.ingredients.map((ing) => {
+      const nameLower = ing.name.toLowerCase();
+      let shouldFlag = false;
+      nextTags.forEach((t) => {
+        const diet = DIETARY_COMPLIANCE_STANDARDS.find((d) => d.label === t);
+        if (diet && diet.forbiddenWords) {
+          diet.forbiddenWords.forEach((word) => {
+            if (word && nameLower.includes(word.toLowerCase())) {
+              shouldFlag = true;
+            }
+          });
+        }
+      });
+      return { ...ing, flagged: shouldFlag };
+    });
+
+    setDraft((prev) => ({ ...prev, dietTags: nextTags, ingredients: updatedIngredients }));
   };
 
   const handleCommitRecipe = () => {
@@ -216,13 +513,32 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
             dietTags: Array.isArray(r.dietTags) ? r.dietTags.filter((t: any) => typeof t === "string") : [],
             sectionLabel: r.sectionLabel || "",
             ingredients: Array.isArray(r.ingredients) 
-              ? r.ingredients.map((ing: any) => ({
-                  amount: ing.amount || "",
-                  unit: ing.unit || "",
-                  name: ing.name || "",
-                  note: ing.note || "",
-                  flagged: !!ing.flagged
-                }))
+              ? r.ingredients.map((ing: any) => {
+                  const ingName = ing.name || "";
+                  const nameLower = ingName.toLowerCase();
+                  let shouldFlag = !!ing.flagged;
+                  
+                  // Run dietary compliance auto-flags on import
+                  const rTags = Array.isArray(r.dietTags) ? r.dietTags.filter((t: any) => typeof t === "string") : [];
+                  rTags.forEach((t: string) => {
+                    const diet = DIETARY_COMPLIANCE_STANDARDS.find((d) => d.label === t);
+                    if (diet && diet.forbiddenWords) {
+                      diet.forbiddenWords.forEach((word) => {
+                        if (word && nameLower.includes(word.toLowerCase())) {
+                          shouldFlag = true;
+                        }
+                      });
+                    }
+                  });
+
+                  return {
+                    amount: ing.amount || "",
+                    unit: ing.unit || "",
+                    name: ingName,
+                    note: ing.note || "",
+                    flagged: shouldFlag
+                  };
+                })
               : [{ amount: "", unit: "", name: "", note: "", flagged: false }],
             steps: Array.isArray(r.steps) ? r.steps.filter((s: any) => typeof s === "string") : [""],
             chefTip: r.chefTip || "",
@@ -365,7 +681,7 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
           </div>
         )}
 
-        {/* JSON Import/Export Integration Toolkit */}
+        {/* "My Heirloom Cookbook" & "Culinary Scanner" Integration */}
         <div className="rounded-2xl border border-dashed border-sagelight/80 bg-mentor-bg/50 p-5 space-y-4 shadow-sm">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-xl bg-sage/10 text-sagedark flex-shrink-0 mt-0.5">
@@ -373,19 +689,11 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
             </div>
             <div className="space-y-1">
               <h4 className="font-serif font-bold text-charcoal text-sm">
-                "My Cookbook" App Integration (.JSON)
+                "My Heirloom Cookbook" & "Culinary Scanner" Integration
               </h4>
               <p className="text-xs text-midgray leading-relaxed">
-                Connect your recipes from your companion app{" "}
-                <a 
-                  href="https://mycookbook.rlbdesigns.com/" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-sagedark font-bold underline hover:text-sage"
-                >
-                  mycookbook.rlbdesigns.com
-                </a>! 
-                Upload your saved JSON cookbook backup file to instantly populate your workspace, or export your current drafts.
+                Connect your recipes from your <strong>My Heirloom Cookbook</strong> phone app or your hand-held <strong>Culinary Scanner</strong>! 
+                Upload your saved family backup file to instantly add them to your beautiful cookbook layout, or save your current recipes as a keepsake backup.
               </p>
             </div>
           </div>
@@ -422,10 +730,10 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
             </button>
             
             <button
-              onClick={() => alert(`Best Schema Format for "My Cookbook" Integration:\n\nProvide a JSON file containing either an array of recipes or a wrapper object:\n\n{\n  "recipes": [\n    {\n      "title": "Recipe Title",\n      "desc": "A short description",\n      "prepTime": "15 mins",\n      "cookTime": "30 mins",\n      "servings": "4",\n      "difficulty": "Easy",\n      "category": "Dinner",\n      "dietTags": ["Gluten-Free", "Nut-Free"],\n      "ingredients": [{ "amount": "1", "unit": "cup", "name": "Rice" }],\n      "steps": ["Step 1 directions...", "Step 2 directions..."]\n    }\n  ]\n}`)}
+              onClick={() => alert(`Best Schema Format for "My Heirloom Cookbook" Integration:\n\nProvide a JSON file containing either an array of recipes or a wrapper object:\n\n{\n  "recipes": [\n    {\n      "title": "Recipe Title",\n      "desc": "A short description",\n      "prepTime": "15 mins",\n      "cookTime": "30 mins",\n      "servings": "4",\n      "difficulty": "Easy",\n      "category": "Dinner",\n      "dietTags": ["Gluten-Free", "Nut-Free"],\n      "ingredients": [{ "amount": "1", "unit": "cup", "name": "Rice" }],\n      "steps": ["Step 1 directions...", "Step 2 directions..."]\n    }\n  ]\n}`)}
               className="text-xs text-sagedark font-bold hover:underline cursor-pointer py-1.5 px-2 hover:bg-[#EEF5EF] rounded-lg transition-colors"
             >
-              View JSON Schema Guide 📋
+              View File Guide 📋
             </button>
           </div>
         </div>
@@ -433,13 +741,13 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
         {/* Step 1: Detail Levels & Badges */}
         <div className="rounded-2xl border border-lightgray/60 bg-white p-5 space-y-4 shadow-sm">
           <label className="text-xs font-bold text-sagedark uppercase tracking-wider block">
-            Workspace Detail Model
+            Recipe Writing Style
           </label>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { id: "basic", label: "🥄 Basic", desc: "No formatting margins" },
-              { id: "detailed", label: "📋 Detailed", desc: "Allows units & substitutions" },
-              { id: "full", label: "⚕️ AGS / Allergy", desc: "Individual safety flags" }
+              { id: "basic", label: "🥄 Simple Card", desc: "Just the title, ingredients list, and steps" },
+              { id: "detailed", label: "📋 Home Cook", desc: "Allows custom units, substitutes, and chef tips" },
+              { id: "full", label: "⚕️ Dietary Safety", desc: "Adds personal safety warnings for ingredient safety flags" }
             ].map((lvl) => (
               <button
                 key={lvl.id}
@@ -487,6 +795,133 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
               </span>
             )}
           </div>
+        </div>
+
+        {/* 🩺 Dietary Standards Compliance Guard Section */}
+        <div className="rounded-2xl border-2 border-sagedark/30 bg-[#EEF5EF]/10 p-5 space-y-4 shadow-sm">
+          <div className="flex items-start gap-2.5">
+            <div className="p-1.5 rounded-lg bg-sagedark/10 text-sagedark mt-0.5">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="font-serif font-bold text-charcoal text-sm">
+                Dietary Standards Compliance Guard
+              </h4>
+              <p className="text-[10px] text-midgray mt-0.5 leading-normal">
+                Check boxes below to ensure this recipe adheres to rigorous health and lifestyle guidelines. Ticking a diet adds its premium badge and live-audits ingredients for safety.
+              </p>
+            </div>
+          </div>
+
+          {/* Search and Quick Filters */}
+          <div className="flex gap-1.5 pt-1">
+            <input
+              type="text"
+              placeholder="Search diets (e.g. Alpha-Gal, FODMAP, Keto...)"
+              className="flex-1 px-3 py-1.5 rounded-lg border border-lightgray text-[10px] bg-white outline-none focus:border-sage placeholder:text-neutral-400"
+              value={dietSearch}
+              onChange={(e) => setDietSearch(e.target.value)}
+            />
+            <select
+              className="px-2 py-1.5 rounded-lg border border-lightgray text-[10px] bg-white outline-none font-semibold text-charcoal"
+              value={selectedDietCat}
+              onChange={(e) => setSelectedDietCat(e.target.value)}
+            >
+              <option value="all">All Diets</option>
+              <option value="medical">Medical & Syndromes</option>
+              <option value="lifestyle">Lifestyle & Macros</option>
+              <option value="allergies">Allergies & Sourced</option>
+            </select>
+          </div>
+
+          {/* Render Categorized Diet Selection Boxes */}
+          <div className="max-h-[220px] overflow-y-auto border border-lightgray/40 rounded-xl bg-white p-2 space-y-2 no-scrollbar">
+            {filteredDiets.map((diet) => {
+              const isActive = draft.dietTags.includes(diet.label);
+              const violations = getDietViolations(diet.id, draft.ingredients);
+              return (
+                <div 
+                  key={diet.id} 
+                  className={`p-2 rounded-lg border transition-all ${
+                    isActive 
+                      ? violations.length > 0 
+                        ? "bg-red-50/40 border-red-200" 
+                        : "bg-[#EEF5EF]/60 border-sage/40" 
+                      : "bg-[#FAF7F2]/40 border-neutral-100 hover:bg-[#EEF5EF]/10"
+                  }`}
+                >
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isActive}
+                      onChange={() => handleToggleDietTag(diet.label)}
+                      className="mt-0.5 accent-sagedark h-3 w-3 rounded"
+                    />
+                    <div className="flex-1 pl-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-charcoal">{diet.label}</span>
+                        <span className="text-[8px] text-midgray font-medium italic">{diet.desc}</span>
+                      </div>
+                      <p className="text-[9px] text-neutral-500 mt-0.5 italic leading-tight">
+                        {diet.standard}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              );
+            })}
+            {filteredDiets.length === 0 && (
+              <span className="text-[10px] text-midgray/60 italic block text-center py-4">
+                No matching diets found for "{dietSearch}".
+              </span>
+            )}
+          </div>
+
+          {/* Active Audit Warnings Shelf */}
+          {activeDietsWithWarnings.length > 0 && (
+            <div className="rounded-xl border border-red-200 bg-red-50/40 p-3 space-y-1.5">
+              <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5" />
+                Dietary Integrity Alert ({activeDietsWithWarnings.length})
+              </span>
+              <div className="space-y-2 text-[10px] text-neutral-700">
+                {activeDietsWithWarnings.map(({ diet, violations }) => (
+                  <div key={diet.id} className="border-l-2 border-red-400 pl-2 space-y-0.5">
+                    <p className="font-bold text-charcoal">
+                      ⚠️ Standard Violation: {diet.label}
+                    </p>
+                    <p className="leading-normal text-neutral-600">
+                      Ingredient <span className="font-mono bg-red-100 px-1 py-0.5 rounded text-red-800">{violations.join(", ")}</span> violates safety standards.
+                    </p>
+                    <p className="text-[8px] italic text-neutral-500 leading-none">
+                      Diet Guideline: {diet.standard}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Compliant Badges Shelf */}
+          {activeCompliantDiets.length > 0 && (
+            <div className="rounded-xl border border-sage/30 bg-[#EEF5EF]/40 p-2.5">
+              <span className="text-[10px] font-bold text-sagedark uppercase tracking-wider flex items-center gap-1.5">
+                <Check className="h-3 w-3" />
+                Verified Compliant ({activeCompliantDiets.length})
+              </span>
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {activeCompliantDiets.map((diet) => (
+                  <span 
+                    key={diet.id} 
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#D5E6D8] border border-[#B3D3B9] text-[8px] font-bold text-sagedark"
+                    title={diet.standard}
+                  >
+                    ✓ {diet.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Step 2: Recipe Basics */}
@@ -674,7 +1109,7 @@ export default function Module5Recipes({ state, updateState, onNavigate }: Modul
                   />
                 )}
 
-                {/* Allergy warning flag (Full Level Only) */}
+                {/* Dietary warning flag (Dietary Safety Level Only) */}
                 {draft.detailLevel === "full" && (
                   <button
                     onClick={() => handleUpdateIngredient(index, { flagged: !ing.flagged })}

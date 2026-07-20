@@ -240,68 +240,70 @@ ${state.nicheAnalysis.suggestions.map((s, i) => `- ${s}`).join("\n")}`;
         ))}
       </div>
 
-      {/* Main Mentor Interface */}
-      <div className="grid gap-6 md:grid-cols-12">
-        <div className="md:col-span-4 space-y-4">
-          <div className="rounded-2xl bg-sagelight/15 border-2 border-sagelight/35 p-5 relative">
-            <div className="flex items-center gap-3">
-              <span className="text-3.5xl select-none">🌿</span>
-              <div>
-                <span className="text-[10px] font-bold tracking-wider text-sagedark uppercase">
-                  Mentor Insight
-                </span>
-                <h4 className="font-serif font-bold text-charcoal">Your Cookbook Mentor</h4>
-              </div>
+      {/* Main Mentor Interface Stacking Vertically */}
+      <div className="space-y-6">
+        {/* Mentor Insight block */}
+        <div className="rounded-2xl bg-sagelight/15 border-2 border-sagelight/35 p-5 relative">
+          <div className="flex items-center gap-3">
+            <span className="text-3.5xl select-none">🌿</span>
+            <div>
+              <span className="text-[10px] font-bold tracking-wider text-sagedark uppercase">
+                Mentor Insight
+              </span>
+              <h4 className="font-serif font-bold text-charcoal">Your Cookbook Mentor</h4>
             </div>
-
-            <p className="mt-4 text-xs md:text-sm text-charcoal/80 leading-relaxed italic">
-              {currentStep === 0 && (
-                "\"Welcome! Every celebrated cookbook starts as a heartbeat. It’s born from a personal journey, a backyard garden, or a mission of care. Let's trace yours carefully.\""
-              )}
-              {currentStep === 1 && (
-                "\"Your author identity is the reader's compass. Setting your pen name is the first official marker of this book. Who is authoring this?\""
-              )}
-              {currentStep === 2 && (
-                "\"Niche focuses are strong pillars. What was the absolute spark or wake-up call that made you reimagine food? Your readers want to connect with your why.\""
-              )}
-              {currentStep === 3 && (
-                "\"Who is your ideal champion? Are they struggle-facing cancer caregivers or newly diagnosed alpha-gal allergy moms? Pick your focal readers.\""
-              )}
-              {currentStep === 4 && (
-                "\"Your theme establishes the aesthetic mood. Let's tag the general focus so Module 3 can recommend palettes that echo this look.\""
-              )}
-              {currentStep === 5 && (
-                "\"Let's declare your battle-tested story. What unique experience qualifies you to write these recipes and save readers the guesswork?\""
-              )}
-              {currentStep === 6 && (
-                "\"Sizing bounds KDP and Etsy metrics. Are we aiming for a compact recipe e-kit or a heavy hardcover family book?\""
-              )}
-              {currentStep === 7 && (
-                "\"Naming is highly emotional. If you're blocked, we can have our server-side Assistant generate options specifically customized to your answers!\""
-              )}
-              {currentStep === 8 && (
-                "\"Look at the scope of your work! Your roadmap is fully charted. Download this summary, then let's build your Dietary Badges in Module 2!\""
-              )}
-            </p>
           </div>
 
-          <div className="rounded-2xl bg-white p-5 border border-lightgray/55 text-center">
-            <span className="text-xs text-midgray">Step Progress</span>
-            <div className="h-2 bg-lightgray rounded-full overflow-hidden mt-2">
+          <p className="mt-4 text-xs md:text-sm text-charcoal/80 leading-relaxed italic">
+            {currentStep === 0 && (
+              "\"Welcome! Every celebrated cookbook starts as a heartbeat. It’s born from a personal journey, a backyard garden, or a mission of care. Let's trace yours carefully.\""
+            )}
+            {currentStep === 1 && (
+              "\"Your author identity is the reader's compass. Setting your pen name is the first official marker of this book. Who is authoring this?\""
+            )}
+            {currentStep === 2 && (
+              "\"Niche focuses are strong pillars. What was the absolute spark or wake-up call that made you reimagine food? Your readers want to connect with your why.\""
+            )}
+            {currentStep === 3 && (
+              "\"Who is your ideal champion? Are they struggle-facing cancer caregivers or newly diagnosed alpha-gal allergy moms? Pick your focal readers.\""
+            )}
+            {currentStep === 4 && (
+              "\"Your theme establishes the aesthetic mood. Let's tag the general focus so Module 3 can recommend palettes that echo this look.\""
+            )}
+            {currentStep === 5 && (
+              "\"Let's declare your battle-tested story. What unique experience qualifies you to write these recipes and save readers the guesswork?\""
+            )}
+            {currentStep === 6 && (
+              "\"Sizing bounds KDP and Etsy metrics. Are we aiming for a compact recipe e-kit or a heavy hardcover family book?\""
+            )}
+            {currentStep === 7 && (
+              "\"Naming is highly emotional. If you're blocked, we can have our server-side Assistant generate options specifically customized to your answers!\""
+            )}
+            {currentStep === 8 && (
+              "\"Look at the scope of your work! Your roadmap is fully charted. Download this summary, then let's build your Dietary Badges in Module 2!\""
+            )}
+          </p>
+        </div>
+
+        {/* Step Progress block */}
+        <div className="rounded-2xl bg-white p-5 border border-lightgray/55 text-center flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-sagedark">
+              Step Progress: Step {currentStep + 1} of {TOTAL_STEPS} ({Math.round(((currentStep + 1) / TOTAL_STEPS) * 100)}%)
+            </span>
+          </div>
+          <div className="flex-1 max-w-md w-full">
+            <div className="h-2.5 bg-lightgray rounded-full overflow-hidden">
               <div
                 className="h-full bg-sagedark transition-all duration-300"
                 style={{ width: `${((currentStep + 1) / TOTAL_STEPS) * 100}%` }}
               />
             </div>
-            <span className="text-xs font-semibold text-sagedark block mt-2">
-              Step {currentStep + 1} of {TOTAL_STEPS} ({Math.round(((currentStep + 1) / TOTAL_STEPS) * 100)}%)
-            </span>
           </div>
         </div>
 
-        {/* Wizard Form Panel */}
-        <div className="md:col-span-8">
-          <div className="rounded-2xl border-2 border-lightgray/60 bg-white p-8 shadow-sm min-h-[420px] flex flex-col justify-between">
+        {/* Wizard Form Panel (Questions block) */}
+        <div className="rounded-2xl border-2 border-lightgray/60 bg-white p-8 shadow-sm min-h-[420px] flex flex-col justify-between">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
@@ -976,6 +978,5 @@ ${state.nicheAnalysis.suggestions.map((s, i) => `- ${s}`).join("\n")}`;
           </div>
         </div>
       </div>
-    </div>
   );
 }

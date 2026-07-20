@@ -16,32 +16,56 @@ export default function Module2Dietary({ state, updateState, onNavigate }: Modul
   const TOTAL_STEPS = 4;
 
   const primaryBadgeOptions = [
-    { label: "⚠️ Alpha-Gal Safe", type: "ags" },
+    { label: "⚠️ Alpha-Gal Safe (Mammal-Free & Dairy-Free)", type: "ags" },
     { label: "🌱 Vegan", type: "standard" },
     { label: "🥦 Vegetarian", type: "standard" },
-    { label: "💚 Cancer Recovery", type: "cancer" },
     { label: "🌾 Gluten-Free", type: "standard" },
     { label: "🥛 Dairy-Free", type: "standard" },
-    { label: "🥑 Keto", type: "standard" },
+    { label: "🩺 Diabetic & Low-Glycemic", type: "standard" },
+    { label: "🧠 Gut-Health & Low-FODMAP", type: "standard" },
+    { label: "💚 Cancer Recovery", type: "cancer" },
+    { label: "🥑 Ketogenic", type: "standard" },
     { label: "🦕 Paleo", type: "standard" },
-    { label: "🌞 Clean Eating", type: "standard" },
-    { label: "🪴 Garden-to-Table", type: "standard" }
+    { label: "🩹 Autoimmune & AIP", type: "cancer" },
+    { label: "🫁 Heart & Cardiovascular", type: "standard" }
   ];
 
   const secondaryBadgeOptions = [
+    // AGS & Autoimmune / Medical
     { label: "🚫 Mammal-Free", type: "ags" },
-    { label: "🥜 Nut-Free", type: "standard" },
+    { label: "🧬 Migraine & Neurological", type: "ags" },
+    { label: "🩸 Blood Sugar Management", type: "standard" },
+    { label: "🫀 Heart & Cardiovascular", type: "standard" },
+    { label: "🩹 Inflammation & AIP (POTS, RA, Crohn's)", type: "cancer" },
+    { label: "🧼 Gastrointestinal (IBS, IBD, FODMAP)", type: "standard" },
+    { label: "🧹 Liver Health (FLD, MASLD, Hepatitis)", type: "cancer" },
+    { label: "🧪 Renal Diet (Kidney Support)", type: "cancer" },
+    { label: "🥄 Soft / Pureed Diet", type: "standard" },
+    
+    // Lifestyle & Portion & Weight
+    { label: "🥩 Flexitarian", type: "standard" },
+    { label: "📉 Low-Carb", type: "standard" },
+    { label: "🧊 Carb-Free", type: "standard" },
+    { label: "💪 High-Protein", type: "standard" },
+    { label: "⚖️ Weight Loss Diet", type: "style" },
+    { label: "📈 Weight Gain Development", type: "style" },
+    { label: "🎭 Fad Diets Support", type: "style" },
+
+    // Allergies & Specifics
+    { label: "🥜 Nut-Free (Food Allergies)", type: "standard" },
     { label: "🥚 Egg-Free", type: "standard" },
     { label: "🌿 Soy-Free", type: "standard" },
     { label: "🌶️ Nightshade-Free", type: "standard" },
     { label: "🌽 Corn-Free", type: "standard" },
-    { label: "🧂 Low-Sodium", type: "standard" },
-    { label: "🍬 Low-Sugar", type: "standard" },
-    { label: "🩺 Diabetic-Friendly", type: "standard" },
-    { label: "🧠 Gut-Health", type: "standard" },
-    { label: "🍵 Anti-Inflammatory", type: "cancer" },
-    { label: "🫐 Antioxidant-Rich", type: "cancer" },
-    { label: "💊 Chemo-Friendly", type: "cancer" },
+    { label: "🧂 Low-Sodium / Salt-Free", type: "standard" },
+    { label: "🍬 Low-Sugar / Sugar-Free", type: "standard" },
+    
+    // Other Known Diets
+    { label: "🌊 Mediterranean", type: "standard" },
+    { label: "🥗 Raw Food Diet", type: "standard" },
+    { label: "🏛️ DASH Diet", type: "standard" },
+    { label: "☪️ Halal Certified", type: "standard" },
+    { label: "✡️ Kosher Approved", type: "standard" },
     { label: "⚡ Quick & Easy", type: "style" },
     { label: "🍲 One-Pot Meals", type: "style" },
     { label: "👨‍👩‍👧 Kid-Friendly", type: "style" },
